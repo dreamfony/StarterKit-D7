@@ -1,0 +1,5 @@
+name = Custom Configuration
+description = "Site configuration"
+core = 7.x
+configure = admin/config/site-configuration
+package = configuration

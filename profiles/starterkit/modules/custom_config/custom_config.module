@@ -1,0 +1,143 @@
+<?php
+// todo add to settings page
+// todo add to settings option to reset module schema_version - drupal_set_installed_schema_version and delete vars
+define("MODULE_NAME", variable_get('custom_config_module'));
+define("CLICKY_KEYWORD", variable_get('custom_config_click_keyword'));
+define("INSTRUCTIONS_FOLDER", variable_get('custom_config_instructions_folder'));
+
+/**
+ * Implements hook_menu().
+ */
+function custom_config_menu() {
+  $items = array();
+
+  $items['admin/config/site-configuration'] = array(
+    'title' => 'Site configuration Management',
+    'description' => 'Configuration Management',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('custom_config_admin_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'includes/custom_config.admin.inc',
+  );
+  $items['admin/config/site-configuration/view'] = array(
+    'title' => 'View Site Configuration',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/config/site-configuration/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('access administration pages'),
+    'weight' => 10,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('custom_config_settings'),
+    'file' => 'includes/custom_config.admin.inc',
+  );
+  $items['admin/config/site-configuration/menu'] = array(
+    'title' => 'Menu & Path Configuration',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('access administration pages'),
+    'weight' => 9,
+    'page callback' => '_custom_config_menus_configuration',
+    'file' => 'includes/custom_config.admin.inc',
+
+  );
+
+  return $items;
+}
+
+/**
+ * Returns a list of the pending database updates.
+ */
+function get_new_updates() {
+  require_once DRUPAL_ROOT . '/includes/install.inc';
+  require_once DRUPAL_ROOT . '/includes/update.inc';
+  $ret = array();
+  /*
+   * This is maybe required if new update hooks will not be visible cause of cache, but for now it works
+   */
+
+  /*
+  module_implements('', FALSE, TRUE);
+
+  if (db_table_exists('cache_update')) {
+    cache_clear_all('*', 'cache_update', TRUE);
+  }
+  */
+
+  $modules = drupal_get_installed_schema_version(NULL, FALSE, TRUE);
+  $module = MODULE_NAME;
+  $schema_version = $modules[$module];
+  $ret[$module]['schema_version'] = $schema_version;
+  $ret[$module]['needs_clicky'] = FALSE;
+  module_load_install($module);
+
+  // Otherwise, get the list of updates defined by this module.
+  $updates = drupal_get_schema_versions($module);
+  if ($updates !== FALSE) {
+    // module_invoke returns NULL for nonexisting hooks, so if no updates
+    // are removed, it will == 0.
+
+    $updates = drupal_map_assoc($updates);
+    foreach (array_keys($updates) as $update) {
+
+      // The description for an update comes from its Doxygen.
+      $function = $module . '_update_' . $update;
+      $func = new ReflectionFunction($function);
+
+      $description = str_replace(array(
+        "\n",
+        '*',
+        '/'
+      ), '', $func->getDocComment());
+
+      if ($update > $schema_version) {
+        $ret[$module]['pending'][$update]['description'] = $description;
+        if (strpos($description, CLICKY_KEYWORD) !== FALSE) {
+          if (variable_get($function) == NULL) {
+            $ret[$module]['pending'][$update]['needs_clicky'] = TRUE;
+            $ret[$module]['needs_clicky'] = TRUE;
+          }
+        }
+      }
+
+      else {
+        $ret[$module]['non_pending'][$update]['description'] = "$description";
+        if (strpos($description, CLICKY_KEYWORD) !== FALSE) {
+          $ret[$module]['non_pending'][$update]['needs_clicky'] = TRUE;
+        }
+      }
+      if (!isset($ret[$module]['start'])) {
+        $ret[$module]['start'] = $update;
+      }
+
+    }
+    if (!isset($ret[$module]['start']) && isset($ret[$module]['pending'])) {
+      $ret[$module]['start'] = $schema_version;
+    }
+  }
+
+
+  return $ret;
+}
+
+/**
+ * Implements hook_init().
+ */
+function custom_config_init() {
+  global $user;
+  if ($user->uid == '1') {
+    if (drupal_is_front_page() OR arg(1) == 'dashboard') {
+      $updates = get_new_updates();
+      $updates = $updates[MODULE_NAME];
+      if ($updates['needs_clicky'] == TRUE) {
+        drupal_set_message(t('Please go to <a href="@url">site configuration</a> to read newest update instructions', array('@url' => base_path() . 'admin/config/site-configuration')), 'error', FALSE);
+      }
+      if (isset($updates['pending']) AND $updates['needs_clicky'] != TRUE) {
+        drupal_set_message(t('Please run <a href="@url"> site update</a> to apply newest settings', array('@url' => base_path() . 'update.php')), 'warning', FALSE);
+      }
+    }
+  }
+}
+
+module_load_include('inc', 'custom_config', 'includes/features_banish');

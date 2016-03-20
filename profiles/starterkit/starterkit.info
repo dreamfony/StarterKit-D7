@@ -1,0 +1,28 @@
+name = Starterkit
+description = This is a starter profile used to jumpstart development.
+version = "7.x-1.0"
+core = 7.x
+exclusive = true
+; MODULES (core)
+; ==============
+
+
+dependencies[] = block
+dependencies[] = contextual
+dependencies[] = field_ui
+dependencies[] = file
+dependencies[] = image
+dependencies[] = list
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = path
+dependencies[] = syslog
+dependencies[] = taxonomy
+
+
+dependencies[] = features
+dependencies[] = features_banish
+dependencies[] = custom_config
+dependencies[] = starter_configuration
+

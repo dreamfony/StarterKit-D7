@@ -1,0 +1,41 @@
+<?php
+/**
+ * @file
+ * Install functions for the starter site install profile.
+ */
+
+ 
+ 
+/**
+ * Implements hook_install().
+ *
+ * Perform actions to set up the site for this profile.
+ *
+ * @see system_install()
+ */
+function starterkit_install() {
+
+  /*
+   *Enable the site-wide and administrative themes.
+   */
+  theme_enable(array('seven', 'garland'));
+
+  /*
+   * Enable the config modules in specific order.
+   */
+//  $modules = array(
+//	'starter_configuration',
+//  );
+//
+//  module_enable($modules, FALSE);
+  features_revert();
+
+  // Load the administrator role created through features.
+  $admin_role = user_role_load_by_name('administrator');
+
+  // Assign user 1 the "administrator" role.
+  db_merge('users_roles')
+    ->key(array('uid' => 1, 'rid' => $admin_role->rid))
+    ->fields(array('uid' => 1, 'rid' => $admin_role->rid))
+    ->execute();
+}

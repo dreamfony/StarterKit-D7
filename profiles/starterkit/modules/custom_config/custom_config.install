@@ -1,0 +1,99 @@
+<?php
+$module = basename(__FILE__, '.install');
+define("UPDATE_MODULE_NAME", variable_get('custom_config_module', $module));
+
+// $instructions_folder = base_path() . drupal_get_path('module', UPDATE_MODULE_NAME) . '/instructions/';
+$instructions_folder = '/sites/all/config';
+define("INSTRUCTIONS_FOLDER_INSTALL", variable_get('custom_config_instructions_folder', $instructions_folder));
+/**
+ * Implements hook_requirements().
+ *
+ */
+
+// drush does not respect requirements - https://github.com/drush-ops/drush/issues/1427
+function custom_config_requirements($phase) {
+  $requirements = array();
+// Ensure translations don't break during installation.
+  $t = get_t();
+
+  if ($phase == "install"){
+
+  }
+
+  if ($phase == 'runtime' OR $phase == 'update') {
+    $updates = get_new_updates();
+    $updates = $updates[UPDATE_MODULE_NAME];
+    if ($updates['needs_clicky'] == TRUE) {
+// todo refactor this so it doesnt repeat itself
+      // todo provuci linkove kroz l()
+      $requirements ['custom_config'] = array(
+        'title' => $t('Custom Configuration for @site_name', array('@site_name' => variable_get('site_name'))),
+        'description' => $t('Your configuration is not up to date. Please go <a href="@url">view update instructions</a>.', array('@url' => base_path() . 'admin/config/site-configuration')),
+        'severity' => REQUIREMENT_ERROR,
+        'weight' => -1000,
+        'value' => 'Last update: ' . $updates['schema_version']
+      );
+    }
+    elseif (isset($updates['pending'])) {
+      $requirements ['custom_config'] = array(
+        'title' => $t('Custom Configuration for @site_name', array('@site_name' => variable_get('site_name'))),
+        'description' => $t('Please run <a href="@url"> site update</a>.', array('@url' => base_path() . 'update.php')),
+        'severity' => REQUIREMENT_INFO,
+        'weight' => -1000,
+        'value' => 'Last update: ' . $updates['schema_version']
+      );
+    }
+    else {
+      $requirements ['custom_config'] = array(
+        'title' => $t('Custom Configuration for @site_name', array('@site_name' => variable_get('site_name'))),
+        'description' => $t('Configuration is up to date'),
+        'severity' => REQUIREMENT_OK,
+        'weight' => -1000,
+        'value' => 'Last update: ' . $updates['schema_version']
+      );
+    }
+
+  }
+
+  return $requirements;
+}
+
+function update_settings($var_name) {
+  // Save git tag/SHA & time OR delete variable?
+  variable_set($var_name, time());
+  drupal_set_message($var_name);
+}
+
+function custom_config_install() {
+  variable_set('custom_config_module', UPDATE_MODULE_NAME);
+  variable_set('custom_config_instructions_folder', INSTRUCTIONS_FOLDER_INSTALL);
+  variable_set('custom_config_click_keyword', '@todo click');
+}
+
+/*
+ *
+ */
+function custom_config_enable() {
+  variable_set('custom_config_instructions_folder', INSTRUCTIONS_FOLDER_INSTALL);
+  drupal_set_message($message = t('PLEASE CHECK FOR ANY SETTINGS THAT NEED TO BE APPLIED BY HAND!'), $type = 'status');
+  drupal_set_installed_schema_version(UPDATE_MODULE_NAME, 0);
+}
+
+/*
+ * todo Delete all variables
+ */
+
+function custom_config_uninstall() {
+//  variable_del('');
+}
+/*
+ * !!!PLEASE WRITE HOOK_UPDATE FUNCTIONS IN UPDATES.PHP FILE!!!
+ */
+//$updates_file = $_SERVER['DOCUMENT_ROOT'].INSTRUCTIONS_FOLDER_INSTALL . 'updates.php';
+$updates_file = INSTRUCTIONS_FOLDER_INSTALL . 'updates.php';
+if (file_exists($updates_file)) {
+  require_once $updates_file;
+}
+else {
+  drupal_set_message($message = t('Your custom_config_instructions_folder variable is not properly set'), $type = 'warning');
+}

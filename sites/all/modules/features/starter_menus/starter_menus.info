@@ -1,0 +1,9 @@
+name = Menus
+core = 7.x
+package = Configuration
+features[features_api][] = api:2
+features[menu_custom][] = main-menu
+features[menu_custom][] = navigation
+features[menu_custom][] = user-menu
+features_exclude[dependencies][features] = features
+features_exclude[dependencies][menu] = menu

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Starter Configuration feature.
+ */
+
+include_once 'starter_configuration.features.inc';
